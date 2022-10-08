@@ -1,0 +1,222 @@
+---
+title: "p8105_hw3_yc4195.RMD"
+author: "Yimin Chen yc4195"
+date: '`r format(Sys.time(), "%Y-%m-%d")`'
+output: github_document
+
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(p8105.datasets)
+library(hexbin)
+library(patchwork)
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 1
+```{r }
+data("instacart")
+
+
+instacart %>%
+  group_by(aisle) %>%
+  summarize(n_obs = n())%>%
+  arrange(desc(n_obs))%>%
+  filter(n_obs > 10000)%>%
+  ggplot(aes(x = aisle, y = n_obs,color =  aisle)) + geom_point()
+```
+Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+```{r }
+instacart %>% 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  group_by(aisle) %>% 
+  count(product_name) %>% 
+  mutate(rank = min_rank(desc(n))) %>% 
+  filter(rank < 4) %>% 
+  arrange(aisle, rank) %>% 
+  knitr::kable(digits = 1)
+```
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+```{r }
+instacart %>% 
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
+  group_by(product_name, order_dow) %>% 
+  summarise(mean_hour = mean(order_hour_of_day)) %>% 
+  pivot_wider(
+    names_from = order_dow,
+    values_from = mean_hour
+  )%>% 
+  knitr::kable()
+```
+
+## Problem 2
+
+```{r, q1}
+accel = 
+  read_csv("./data/accel_data.csv", col_types = cols(
+      week = col_integer(),
+      day_id = col_integer()
+      )) %>%
+  janitor::clean_names() %>% 
+  mutate(
+    weekend = case_when(
+      day == "Monday" ~ "weekday",
+      day == "Tuesday" ~ "weekday",
+      day == "Wednesday" ~ "weekday",
+      day == "Thursday" ~ "weekday",
+      day == "Friday" ~ "weekday",
+      day == "Saturday" ~ "weekend",
+      day == "Sunday" ~ "weekend"
+)) %>% 
+  pivot_longer(
+    activity_1:activity_1440, 
+    names_to = "activity",
+    values_to = "activity_count") %>% 
+  separate(activity, into = c("activity", "activity_time")) %>%
+  select(-activity) %>%
+  mutate(
+    day_id = as.factor(day_id),
+    day = factor(day),
+    day = forcats::fct_relevel(day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")),
+    activity_count = as.numeric(activity_count)
+    )
+  
+```
+The Accelerometers dataset uses five weeks of accelerometer data collected on a 63 year-old male with BMI 25, who was admitted to the Advanced Cardiac Care Center of Columbia University Medical Center and diagnosed with congestive heart failure (CHF). The Accelerometers dataset has `r nrow(accel)` rows and `r ncol(accel)` columns. The variables in this dataset are `r names(accel)`. I create a new variable named 'weekend' to indicate whether the day observed is during weekdays or weekends. Also, I convert `day` variable from a character variable to a factor variable.
+
+
+```{r,q2 }
+accel_table <-
+  accel %>% 
+  group_by(day_id, day, week) %>%
+  summarize(total_activity = sum(activity_count)) %>% 
+  knitr::kable(digits = 0)
+accel_table
+```
+From the generated table, we can see during Saturday in week 4 and 5, the total activity falls into a lowest value.Overall, there isn't a clear trend for total activity pattern for each day.
+
+```{r,q3}
+accel_plot <-
+  accel%>% 
+  group_by(day, day_id) %>% 
+  mutate(activity_time = parse_number(activity_time)) %>% 
+  ggplot(aes(x = activity_time, y = activity_count, group = day_id, color = day)) + 
+  labs(
+    title = " 24-hour activity time courses for each day",
+    x = "Time of Day",
+    y = "Total Activity Count",
+    caption = "Accelerometer Data"
+  ) + 
+ scale_x_continuous(
+    breaks = c(0, 180, 360, 540, 720, 900, 1080, 1260, 1440),
+    labels = c("0:00", "3:00", "6:00", "9:00", "12:00", "15:00", "18:00", "21:00", "23:59"),
+    limits = c(0, 1440)) +
+  geom_line()
+accel_plot
+```
+
+Most of the activities focus on morning to noon (9am to 12) and evening (7pm to 11pm).On Sunday, participants tend to be more active during the noon. 
+
+## Problem 3
+
+```{r 3-1}
+data("ny_noaa")
+```
+
+The ny_noaa dataset contains informationaccessed from the NOAA National Climatic Data Center. The ataset has `r nrow(ny_noaa)` rows and `r ncol(ny_noaa)` columns.The variables in this dataset are `r names(ny_noaa)` .
+`id`: the Weather station ID
+`date`: Date of observation
+`prcp`: Precipitation 
+`tmax`: Maximum temperature 
+`tmin`: Minimum temperature 
+`snow`: Snowfall (mm)
+`snwd`: Snow depth (mm)
+The extent to which missing data is an issue is determined by whether the data is missing at random since the station may not collect some precipitation or snow data.
+
+```{r 3-2}
+noaa_df = ny_noaa %>% 
+  janitor::clean_names() %>% 
+  separate(date, into = c("year", "month", "day"), convert = TRUE) %>%
+  mutate(
+    year = as.numeric(year),
+    month = as.numeric(month),
+    day = as.numeric(day),
+    tmax = as.numeric(tmax) / 10,
+    tmin = as.numeric(tmin) / 10,
+    prcp = prcp / 10 )
+```
+
+
+```{r snowfall_noaa}
+noaa_df %>% 
+  group_by(snow) %>% 
+    summarize(
+        n_obs_snow = n()
+    ) %>% 
+    arrange(-n_obs_snow)
+```
+
+From the data, you can see see most commonly observed values for snowfall are `0` (n = 2,008,508) ,which indicates it's not snowing for most days at NYC. It makes sence since snow days will only occur during some cold days but all the other days are warm.  Also, `NA` (n = 381,221) is the second commonly observed value for snowfall, which means there are a lot of missing observations for snowfall. That's also reasonable since the station may not collect some precipitation or snow data on certain days.
+
+```{r two_panel_plot1, message=FALSE, warning=FALSE}
+two_panel_plot = noaa_df %>% 
+  filter(month %in% c("1", "7")) %>%
+  group_by(id, year, month) %>%
+  summarize(mean_tmax = mean(tmax,na.rm = TRUE))%>% 
+   drop_na() %>% 
+  ggplot(aes(x = year, y = mean_tmax, group = id, color = month)) +
+  geom_point() +
+  geom_smooth() +
+  labs(
+    title = "Average max temperature in January and July in each NYC station across years",
+    x = "Year",
+    y = "Average max temperature in January and July in each NYC station across years"
+  ) +
+  facet_grid(. ~ month)+
+  theme_bw()+
+  theme(legend.position = "none") 
+two_panel_plot
+```
+The average maximum temperature in January ranged from -10°C to 10°C degrees, with two severely points falling below -10°C degrees, which can be seen as two outliers.The average maximum temperature in July ranged from 20°C to 30°C degrees,  and it seems to have 4 outliers in total. Overall, the average maximum temperature in January seems to be much lower than the average maximum temperature in July, but the average maximum temperature of Jan seems to have more fluctuations (more broader) than that of July.
+
+
+
+
+```{r two_panel_plot2}
+plot1=
+  noaa_df %>%
+  drop_na(tmin, tmax) %>% 
+  ggplot(aes(x = tmin, y = tmax)) +
+  geom_hex() +
+  labs(
+    title = "Daily temperature 1981-2010",
+    x = "Minimum temperature (Celsius)",
+    y = "Maximum temperature (Celsius)"
+  ) + 
+  theme(legend.position = "right")
+plot2=
+  noaa_df %>%
+  filter(snow > 0 ,snow < 100) %>%
+  group_by(year) %>%
+  ggplot(aes(x = year, y = snow,group = year)) +
+  geom_boxplot(fill = 'pink') + 
+  labs(
+    title = 'NY Snowfall value by year',
+    y = 'Snowfall in mm',
+    x = 'Year'
+  )
+plot1 / plot2  
+```
+
