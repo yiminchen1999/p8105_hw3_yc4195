@@ -222,7 +222,7 @@ plot1=
   theme(plot.title = element_text(hjust = 0.5))
 plot2=
   noaa_df %>%
-  filter(snow > 0 ,snow < 100) %>%
+  filter(snow > 0 ,snow <100) %>%
   group_by(year) %>%
   ggplot(aes(x = year, y = snow,group = year)) +
   labs(
@@ -232,7 +232,7 @@ plot2=
   )+scale_x_continuous(
                      breaks =c(1980,1985,1990,1995,2000,2005,2010),
                      limits = c(1980,2011))+ 
-  stat_boxplot(geom = "boxplot",  width = 0.6)+
+  geom_boxplot(width = 0.5,fill="pink")+
   theme(plot.title = element_text(hjust = 0.5))
 plot1 / plot2  
 ```
