@@ -10,13 +10,17 @@ output: github_document
 library(tidyverse)
 library(p8105.datasets)
 library(hexbin)
+library(ggridges)
 library(patchwork)
 knitr::opts_chunk$set(
-  fig.width = 6,
-  fig.asp = .6,
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
   out.width = "90%"
 )
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
 options(
   ggplot2.continuous.colour = "viridis",
   ggplot2.continuous.fill = "viridis"
@@ -26,9 +30,26 @@ scale_fill_discrete = scale_fill_viridis_d
 ```
 
 ## Problem 1
-```{r }
+
+#### Read in the data
+
+```{r}
 data("instacart")
 
+instacart = 
+  instacart %>% 
+  as_tibble(instacart)
+```
+
+#### Answer questions about the data
+
+This dataset has `r nrow(instacart)` rows and `r ncol(instacart)` columns.Variables contain user, order, and product IDs, as well as the sequence in which each product was put to the basket. There are various order-level variables that describe the day and time of the order, as well as the number of days since the last order. Then there are many item-specific variables that describe the product name (e.g., Yogurt, Avocado), department (e.g., dairy and eggs, produce), and aisle (e.g., yogurt, fresh fruits), as well as if the item has been ordered previously by this user. Overall, there are `r instacart %>% select(product_id) %>% distinct %>% count` products found in `r instacart %>% select(user_id, order_id) %>% distinct %>% count` orders from `r instacart %>% select(user_id) %>% distinct %>% count` distinct users.
+
+There are 134 aisles in all, with fresh vegetables and fruits having by far the most things ordered.The figure that follows displays the quantity of things ordered in each aisle. Aisles are arranged in ascending order of item count.
+```{r }
+instacart %>% 
+  count(aisle) %>% 
+  arrange(desc(n))
 
 instacart %>%
   group_by(aisle) %>%
@@ -39,24 +60,26 @@ instacart %>%
         aisle = factor(aisle),
         aisle = fct_reorder(aisle, n_obs)
     ) %>% 
-  ggplot(aes(x = aisle, y = n_obs)) + geom_point()+
+  ggplot(aes(x = aisle, y = n_obs)) + geom_point()+labs(title = "Number of items ordered in each aisle") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+The table below shows the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in this table.
 
 ```{r }
 instacart %>% 
-  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>%
   group_by(aisle) %>% 
   count(product_name) %>% 
   mutate(rank = min_rank(desc(n))) %>% 
   filter(rank < 4) %>% 
-  arrange(aisle, rank) %>% 
-  knitr::kable(digits = 1)
+  arrange(desc(n)) %>%
+  knitr::kable()
 ```
 
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+
+From the table, we can see Pink Lady Apples are generally purchased slightly earlier in the day than Coffee Ice Cream, with the exception of day 5.
 
 ```{r }
 instacart %>% 
@@ -67,7 +90,7 @@ instacart %>%
     names_from = order_dow,
     values_from = mean_hour
   )%>% 
-  knitr::kable()
+  knitr::kable(digits = 2)
 ```
 
 ## Problem 2
@@ -164,13 +187,21 @@ skimr::skim_without_charts(noaa_df %>% select(-id))
 ```
 
 The ny_noaa dataset contains informationaccessed from the NOAA National Climatic Data Center. The dataset has `r nrow(ny_noaa)` rows and `r ncol(ny_noaa)` columns.The variables in this dataset are `r names(ny_noaa)` , which include: 
-id: Weather station ID
-date: Date of observation
-prcp: Precipitation (tenths of mm)
-snow: Snowfall (mm)
-snwd: Snow depth (mm)
-tmax: Maximum temperature (tenths of degrees C)
-tmin: Minimum temperature (tenths of degrees C)
+
+#id: Weather station ID
+
+#date: Date of observation
+
+#prcp: Precipitation (tenths of mm)
+
+#snow: Snowfall (mm)
+
+#snwd: Snow depth (mm)
+
+#tmax: Maximum temperature (tenths of degrees C)
+
+#tmin: Minimum temperature (tenths of degrees C)
+
 The extent to which missing data is an issue is determined by whether the data is missing at random since the station may not collect some precipitation or snow data. More detailed information is presented in the chart above.
 
 ```{r snowfall_noaa}
