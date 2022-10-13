@@ -35,9 +35,16 @@ instacart %>%
   summarize(n_obs = n())%>%
   arrange(desc(n_obs))%>%
   filter(n_obs > 10000)%>%
-  ggplot(aes(x = aisle, y = n_obs,color =  aisle)) + geom_point()
+  mutate(
+        aisle = factor(aisle),
+        aisle = fct_reorder(aisle, n_obs)
+    ) %>% 
+  ggplot(aes(x = aisle, y = n_obs)) + geom_point()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
+
 Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+
 ```{r }
 instacart %>% 
   filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
@@ -48,7 +55,9 @@ instacart %>%
   arrange(aisle, rank) %>% 
   knitr::kable(digits = 1)
 ```
+
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+
 ```{r }
 instacart %>% 
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
@@ -94,25 +103,31 @@ accel =
     )
   
 ```
+
 The Accelerometers dataset uses five weeks of accelerometer data collected on a 63 year-old male with BMI 25, who was admitted to the Advanced Cardiac Care Center of Columbia University Medical Center and diagnosed with congestive heart failure (CHF). The Accelerometers dataset has `r nrow(accel)` rows and `r ncol(accel)` columns. The variables in this dataset are `r names(accel)`. I create a new variable named 'weekend' to indicate whether the day observed is during weekdays or weekends. Also, I convert `day` variable from a character variable to a factor variable.
 
 
 ```{r,q2 }
 accel_table <-
   accel %>% 
-  group_by(day_id, day, week) %>%
-  summarize(total_activity = sum(activity_count)) %>% 
+  group_by(week,day) %>%
+  summarize(total_activity = sum(activity_count)) %>%pivot_wider(
+    names_from = day, 
+    values_from = total_activity
+  )%>%
   knitr::kable(digits = 0)
 accel_table
 ```
+
 From the generated table, we can see during Saturday in week 4 and 5, the total activity falls into a lowest value.Overall, there isn't a clear trend for total activity pattern for each day.
 
 ```{r,q3}
 accel_plot <-
   accel%>% 
   group_by(day, day_id) %>% 
-  mutate(activity_time = parse_number(activity_time)) %>% 
+   mutate(activity_time = parse_number(activity_time)) %>% 
   ggplot(aes(x = activity_time, y = activity_count, group = day_id, color = day)) + 
+  theme(legend.position = "right") +
   labs(
     title = " 24-hour activity time courses for each day",
     x = "Time of Day",
@@ -123,6 +138,7 @@ accel_plot <-
     breaks = c(0, 180, 360, 540, 720, 900, 1080, 1260, 1440),
     labels = c("0:00", "3:00", "6:00", "9:00", "12:00", "15:00", "18:00", "21:00", "23:59"),
     limits = c(0, 1440)) +
+  theme(plot.title = element_text(hjust = 0.5))+
   geom_line()
 accel_plot
 ```
@@ -131,21 +147,9 @@ Most of the activities focus on morning to noon (9am to 12) and evening (7pm to 
 
 ## Problem 3
 
-```{r 3-1}
+```{r 3-1&2}
 data("ny_noaa")
-```
 
-The ny_noaa dataset contains informationaccessed from the NOAA National Climatic Data Center. The ataset has `r nrow(ny_noaa)` rows and `r ncol(ny_noaa)` columns.The variables in this dataset are `r names(ny_noaa)` .
-`id`: the Weather station ID
-`date`: Date of observation
-`prcp`: Precipitation 
-`tmax`: Maximum temperature 
-`tmin`: Minimum temperature 
-`snow`: Snowfall (mm)
-`snwd`: Snow depth (mm)
-The extent to which missing data is an issue is determined by whether the data is missing at random since the station may not collect some precipitation or snow data.
-
-```{r 3-2}
 noaa_df = ny_noaa %>% 
   janitor::clean_names() %>% 
   separate(date, into = c("year", "month", "day"), convert = TRUE) %>%
@@ -153,11 +157,21 @@ noaa_df = ny_noaa %>%
     year = as.numeric(year),
     month = as.numeric(month),
     day = as.numeric(day),
-    tmax = as.numeric(tmax) / 10,
-    tmin = as.numeric(tmin) / 10,
+    tmax = as.numeric(tmax)/10,
+    tmin = as.numeric(tmin)/10,
     prcp = prcp / 10 )
+skimr::skim_without_charts(noaa_df %>% select(-id))
 ```
 
+The ny_noaa dataset contains informationaccessed from the NOAA National Climatic Data Center. The dataset has `r nrow(ny_noaa)` rows and `r ncol(ny_noaa)` columns.The variables in this dataset are `r names(ny_noaa)` , which include: 
+id: Weather station ID
+date: Date of observation
+prcp: Precipitation (tenths of mm)
+snow: Snowfall (mm)
+snwd: Snow depth (mm)
+tmax: Maximum temperature (tenths of degrees C)
+tmin: Minimum temperature (tenths of degrees C)
+The extent to which missing data is an issue is determined by whether the data is missing at random since the station may not collect some precipitation or snow data. More detailed information is presented in the chart above.
 
 ```{r snowfall_noaa}
 noaa_df %>% 
@@ -178,7 +192,7 @@ two_panel_plot = noaa_df %>%
    drop_na() %>% 
   ggplot(aes(x = year, y = mean_tmax, group = id, color = month)) +
   geom_point() +
-  geom_smooth() +
+  geom_smooth() + 
   labs(
     title = "Average max temperature in January and July in each NYC station across years",
     x = "Year",
@@ -189,9 +203,8 @@ two_panel_plot = noaa_df %>%
   theme(legend.position = "none") 
 two_panel_plot
 ```
+
 The average maximum temperature in January ranged from -10°C to 10°C degrees, with two severely points falling below -10°C degrees, which can be seen as two outliers.The average maximum temperature in July ranged from 20°C to 30°C degrees,  and it seems to have 4 outliers in total. Overall, the average maximum temperature in January seems to be much lower than the average maximum temperature in July, but the average maximum temperature of Jan seems to have more fluctuations (more broader) than that of July.
-
-
 
 
 ```{r two_panel_plot2}
@@ -201,22 +214,26 @@ plot1=
   ggplot(aes(x = tmin, y = tmax)) +
   geom_hex() +
   labs(
-    title = "Daily temperature 1981-2010",
-    x = "Minimum temperature (Celsius)",
-    y = "Maximum temperature (Celsius)"
+    title = "tmax versus tmin",
+    x = "Minimum temperature ",
+    y = "Maximum temperature "
   ) + 
-  theme(legend.position = "right")
+  theme(legend.position = "right")+
+  theme(plot.title = element_text(hjust = 0.5))
 plot2=
   noaa_df %>%
   filter(snow > 0 ,snow < 100) %>%
   group_by(year) %>%
   ggplot(aes(x = year, y = snow,group = year)) +
-  geom_boxplot(fill = 'pink') + 
   labs(
-    title = 'NY Snowfall value by year',
+    title = 'NYC Snowfall count by year',
     y = 'Snowfall in mm',
     x = 'Year'
-  )
+  )+scale_x_continuous(
+                     breaks =c(1980,1985,1990,1995,2000,2005,2010),
+                     limits = c(1980,2011))+ 
+  stat_boxplot(geom = "boxplot",  width = 0.6)+
+  theme(plot.title = element_text(hjust = 0.5))
 plot1 / plot2  
 ```
 
