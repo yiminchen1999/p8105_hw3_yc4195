@@ -95,7 +95,7 @@ instacart %>%
 
 ## Problem 2
 
-```{r, q1}
+```{r, Load, tidy, and otherwise wrangle the data}
 accel = 
   read_csv("./data/accel_data.csv", col_types = cols(
       week = col_integer(),
@@ -130,7 +130,7 @@ accel =
 The Accelerometers dataset uses five weeks of accelerometer data collected on a 63 year-old male with BMI 25, who was admitted to the Advanced Cardiac Care Center of Columbia University Medical Center and diagnosed with congestive heart failure (CHF). The Accelerometers dataset has `r nrow(accel)` rows and `r ncol(accel)` columns. The variables in this dataset are `r names(accel)`. I create a new variable named 'weekend' to indicate whether the day observed is during weekdays or weekends. Also, I convert `day` variable from a character variable to a factor variable.
 
 
-```{r,q2 }
+```{r, aggregate across minutes to create a total activity variable for each day }
 accel_table <-
   accel %>% 
   group_by(week,day) %>%
@@ -144,7 +144,7 @@ accel_table
 
 From the generated table, we can see during Saturday in week 4 and 5, the total activity falls into a lowest value.Overall, there isn't a clear trend for total activity pattern for each day.
 
-```{r,q3}
+```{r,a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week}
 accel_plot <-
   accel%>% 
   group_by(day, day_id) %>% 
