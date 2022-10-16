@@ -170,7 +170,7 @@ Most of the activities focus on morning to noon (9am to 12) and evening (7pm to 
 
 ## Problem 3
 
-```{r 3-1&2}
+```{r Do some data cleaning}
 data("ny_noaa")
 
 noaa_df = ny_noaa %>% 
@@ -202,9 +202,9 @@ The ny_noaa dataset contains informationaccessed from the NOAA National Climatic
 
 #tmin: Minimum temperature (tenths of degrees C)
 
-The extent to which missing data is an issue is determined by whether the data is missing at random since the station may not collect some precipitation or snow data. More detailed information is presented in the chart above.
+The extent to which missing data is an issue is determined by whether the data is missing reasonably since the station may not collect some precipitation,snow data, and some records for max&min temperature. Also, in NYC, it's not snowing or precipitating for most days so some missing data makes sense. More detailed information of missing data summary is presented in the chart above.
 
-```{r snowfall_noaa}
+```{r snowfall_count}
 noaa_df %>% 
   group_by(snow) %>% 
     summarize(
